@@ -12,19 +12,10 @@ import SwordRPC
 
 let xcodeBundleId = "com.apple.dt.Xcode"
 
-let xcodeWindowNames = [
-    "Simulator",
-    "Instruments",
-    "Accessibility Inspector",
-    "FileMerge",
-    "Create ML",
-    "RealityComposer",
-]
-
 class AXScrape: ObservableObject {
   var timer: Timer?
   init() {
-    self.timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true, block: { _ in
+    self.timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true, block: { _ in
       self.scrape()
     })
   }
@@ -76,7 +67,7 @@ struct XcodeState: Equatable {
     if let fileName {
       let fx = fileName.split(separator: ".").last
       if let fx {
-        return String(fx)
+        return String(fx).lowercased()
       }
     }
     return nil

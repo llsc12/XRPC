@@ -66,21 +66,29 @@ class RPC: ObservableObject, SwordRPCDelegate {
     if state == nil { rpcDisconnect() } else { rpcConnect() }
     guard let state else { return }
     var presence = RichPresence()
-    if state.isIdle {
-      presence.details = "Idling"
-    } else {
-      presence.details = "In \(state.workspace ?? "Unknown")"
+    if let ws = state.workspace {
+      presence.details = "In \(ws)"
     }
-    if let filename = state.fileName {
-      if state.isEditingFile {
-        presence.state = "Editing \(filename)"
-      } else {
-        presence.state = "Viewing \(filename)"
+    
+    if state.isIdle {
+      presence.state = "Idling in Xcode"
+    } else {
+      if let filename = state.fileName {
+        if state.isEditingFile {
+          presence.state = "Editing \(filename)"
+        } else {
+          presence.state = "Viewing \(filename)"
+        }
       }
     }
+    
     let date = state.sessionDate ?? .now
     presence.timestamps.start = date
     presence.timestamps.end = nil
+    
+    presence.assets.largeImage = state.fileExtension ?? "xcode"
+    presence.assets.largeText = presence.state
+    
     rpc.setPresence(presence)
   }
 }
