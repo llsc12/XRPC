@@ -60,7 +60,7 @@ struct XcodeState: Equatable {
   
   var fileName: String? {
     if isIdle { return nil }
-    return editorFile?.lastPathComponent
+    return editorFile?.lastPathComponent.removingPercentEncoding
   }
   
   var fileExtension: String? {
