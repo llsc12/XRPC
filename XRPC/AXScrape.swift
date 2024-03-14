@@ -19,31 +19,61 @@ class AXScrape: ObservableObject {
       self.scrape()
     })
   }
-    
-  @Published var xcodeState: XcodeState? = nil
+  
+  @Published var presenceState: PresenceState = .xcodeNoWindowsOpen
   
   func scrape() {
     guard UIElement.isProcessTrusted(withPrompt: false) else { return }
     
-    guard let xcodeApp = Application.allForBundleID(xcodeBundleId).first else { self.xcodeState = nil; return }
+    guard let xcodeApp = Application.allForBundleID(xcodeBundleId).first else { self.presenceState = .xcodeNotRunning; return }
     
-    let focusedWindow: UIElement? = try? xcodeApp.attribute(.mainWindow)
+    let windows = try? xcodeApp.windows()
     
-    let windowTitle: String? = try? focusedWindow?.attribute(.title)
+    let mainWindow: UIElement? = try? xcodeApp.attribute(.mainWindow)
+    
+    let focusedWindow: UIElement? = try? xcodeApp.attribute(.focusedWindow)
+    let focusedWindowTitle: String? = try? focusedWindow?.attribute(.title)
+    
+    if mainWindow == nil && (windows?.isEmpty ?? false) {
+      // no windows open
+      self.presenceState = .xcodeNoWindowsOpen
+    }
+    
+    if focusedWindowTitle?.contains("Welcome") ?? false {
+      self.presenceState = .isOnWelcome
+      return
+    }
+    
+    let windowTitle: String? = try? mainWindow?.attribute(.title)
     let workspace: String? = windowTitle == nil ? nil : windowTitle!.components(separatedBy: " — ").first
     let isEditing: Bool = windowTitle?.contains("— Edited") ?? false
-    let docFilePath: String? = try? focusedWindow?.attribute(.document)
+    let docFilePath: String? = try? mainWindow?.attribute(.document)
     let doc: URL? = docFilePath == nil ? nil : URL(fileURLWithPath: docFilePath!.replacingOccurrences(of: "file://", with: ""))
     
+    let currentSessionDate: Date? = {
+      switch presenceState {
+      case .working(let xcodeState):
+        return xcodeState.sessionDate
+      default: return nil
+      }
+    }()
     
     let xcState = XcodeState(
       workspace: workspace,
       editorFile: doc,
       isEditingFile: isEditing,
-      sessionDate: self.xcodeState?.sessionDate ?? .now /// preserve xcode last date or make new date, used for timings
+      sessionDate: currentSessionDate ?? .now /// preserve xcode last date or make new date, used for timings
     )
-    self.xcodeState = xcState
+    
+    self.presenceState = .working(xcState)
   }
+}
+
+enum PresenceState {
+  case xcodeNotRunning
+  case xcodeNoWindowsOpen // when xcode has no windows and is doing nothing
+  case working(XcodeState) // when user is working
+  case isOnWelcome
 }
 
 struct XcodeState: Equatable {

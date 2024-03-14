@@ -35,12 +35,13 @@ struct MenuBarView: View {
         HStack {
           Text("Xcode")
           Spacer()
-          if ax.xcodeState != nil {
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-          } else {
+          switch ax.presenceState {
+          case .xcodeNotRunning:
             Image(systemName: "xmark.circle.fill")
               .foregroundStyle(.red)
+          default:
+            Image(systemName: "checkmark.circle.fill")
+              .foregroundStyle(.green)
           }
         }
       }

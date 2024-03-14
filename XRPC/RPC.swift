@@ -23,7 +23,7 @@ class RPC: ObservableObject, SwordRPCDelegate {
   var c = Set<AnyCancellable>()
   init() {
     scraper.objectWillChange.sink { _ in
-      self.setPresence(self.scraper.xcodeState)
+      self.setPresence(self.scraper.presenceState)
     }.store(in: &c)
   }
   
@@ -62,33 +62,50 @@ class RPC: ObservableObject, SwordRPCDelegate {
   }
   
   
-  func setPresence(_ state: XcodeState?) {
-    if state == nil { rpcDisconnect() } else { rpcConnect() }
-    guard let state else { return }
-    var presence = RichPresence()
-    if let ws = state.workspace {
-      presence.details = "In \(ws)"
+  func setPresence(_ state: PresenceState) {
+    switch state {
+    case .xcodeNotRunning:    rpcDisconnect() /// disconnect to allow other rpcs to connect
+    case .xcodeNoWindowsOpen: rpcDisconnect() /// disconnect since user isnt doing anything
+    default:                  rpcConnect()    /// user is doing something, connect if not already connected
     }
     
-    if state.isIdle {
-      presence.state = "Idling in Xcode"
-    } else {
-      if let filename = state.fileName {
-        if state.isEditingFile {
-          presence.state = "Editing \(filename)"
-        } else {
-          presence.state = "Viewing \(filename)"
+    var presence = RichPresence()
+    switch state {
+    case .xcodeNotRunning: break
+    case .xcodeNoWindowsOpen: break
+    case .working(let xcodeState):
+      if let ws = xcodeState.workspace {
+        presence.details = "In \(ws)"
+      }
+      
+      if xcodeState.isIdle {
+        presence.state = "Idling in Xcode"
+      } else {
+        if let filename = xcodeState.fileName {
+          if xcodeState.isEditingFile {
+            presence.state = "Editing \(filename)"
+          } else {
+            presence.state = "Viewing \(filename)"
+          }
         }
       }
+      
+      let date = xcodeState.sessionDate ?? .now
+      presence.timestamps.start = date
+      presence.timestamps.end = nil
+      
+      presence.assets.largeImage = xcodeState.fileExtension ?? "xcode"
+      presence.assets.largeText = presence.state
+    case .isOnWelcome:
+      presence.details = "In Welcome window"
+      presence.state = "Choosing a project"
+      
+      presence.timestamps.start = nil
+      presence.timestamps.end = nil
+      
+      presence.assets.largeImage = "xcode"
+      presence.assets.largeText = "Welcome to Xcode"
     }
-    
-    let date = state.sessionDate ?? .now
-    presence.timestamps.start = date
-    presence.timestamps.end = nil
-    
-    presence.assets.largeImage = state.fileExtension ?? "xcode"
-    presence.assets.largeText = presence.state
-    
     rpc.setPresence(presence)
   }
 }
