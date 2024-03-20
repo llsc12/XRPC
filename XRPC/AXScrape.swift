@@ -25,6 +25,7 @@ class AXScrape: ObservableObject {
   func scrape() {
     guard UIElement.isProcessTrusted(withPrompt: false) else { return }
     
+    let xcodeProcess = NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == xcodeBundleId }
     guard let xcodeApp = Application.allForBundleID(xcodeBundleId).first else { self.presenceState = .xcodeNotRunning; return }
     
     let windows = try? xcodeApp.windows()
@@ -62,8 +63,10 @@ class AXScrape: ObservableObject {
       workspace: workspace,
       editorFile: doc,
       isEditingFile: isEditing,
-      sessionDate: currentSessionDate ?? .now /// preserve xcode last date or make new date, used for timings
+      sessionDate: currentSessionDate ?? xcodeProcess?.launchDate ?? .now /// preserve xcode last date or make new date, used for timings
     )
+    
+    
     
     self.presenceState = .working(xcState)
   }
