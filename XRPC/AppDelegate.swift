@@ -59,11 +59,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 //    self.window?.standardWindowButton(.closeButton)?.isHidden = true
     self.window?.standardWindowButton(.miniaturizeButton)?.isHidden = true
     self.window?.standardWindowButton(.zoomButton)?.isHidden = true
-    let titlebar = self.window?.standardWindowButton(.closeButton)?.superview
+//    let titlebar = self.window?.standardWindowButton(.closeButton)?.superview
 //    self.window?.titlebarAppearsTransparent = true
     self.window?.makeKeyAndOrderFront(self)
     SetupVM.shared.setupWindowClose = { self.window?.close(); self.window = nil}
   }
+  
 }
 
 class KillOnCloseViewController: NSViewController {

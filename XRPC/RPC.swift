@@ -78,14 +78,24 @@ class RPC: ObservableObject, SwordRPCDelegate {
         presence.details = "In \(ws)"
       }
       
+      // if issues != 0
+      var issuesString = ""
+      if xcodeState.totalIssues != 0 {
+        if xcodeState.errors != 0 {
+          issuesString = "⛔️\(xcodeState.errors) "
+        } else if xcodeState.warnings != 0 {
+          issuesString = "⚠️\(xcodeState.totalIssues - xcodeState.errors) "
+        }
+      }
+      
       if xcodeState.isIdle {
         presence.state = "Idling in Xcode"
       } else {
         if let filename = xcodeState.fileName {
           if xcodeState.isEditingFile {
-            presence.state = "Editing \(filename)"
+            presence.state = "Editing \(filename) \(issuesString)"
           } else {
-            presence.state = "Viewing \(filename)"
+            presence.state = "Viewing \(filename) \(issuesString)"
           }
         }
       }
