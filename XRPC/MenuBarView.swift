@@ -12,47 +12,90 @@ struct MenuBarView: View {
   @ObservedObject var ax = RPC.shared.scraper
   
   var body: some View {
-    VStack {
-      Text("XRPC")
-        .font(.title)
-        .fontWeight(.semibold)
-        .fontDesign(.rounded)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      
-      VStack(spacing: 10) {
+    VStack(alignment: .leading, spacing: 15) {
+      VStack(alignment: .leading, spacing: 4) {
         HStack {
-          Text("RPC")
-          Spacer()
-          if rpc.rpcConnected {
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-          } else {
-            Image(systemName: "xmark.circle.fill")
-              .foregroundStyle(.red)
+          MenuBarStatusView(
+            for: rpc.rpcConnected,
+            offIf: false
+          ) {
+            Image(systemName: "text.page")
+          } disabled: {
+            Image(systemName: "text.page.slash")
           }
+          LabeledContent(content: {}, label: {
+            Text("RPC")
+            Text(rpc.rpcConnected ? "Active" : "Inactive")
+          })
         }
         
         HStack {
-          Text("Xcode")
-          Spacer()
-          switch ax.presenceState {
-          case .xcodeNotRunning:
-            Image(systemName: "xmark.circle.fill")
-              .foregroundStyle(.red)
-          default:
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
+          MenuBarStatusView(
+            for: ax.presenceState,
+            offIf: .xcodeNotRunning
+          ) {
+            Image(systemName: "hammer")
+          } disabled: {
+            Image(systemName: "hammer")
           }
+          LabeledContent(content: {}, label: {
+            Text("Xcode")
+            Text(ax.presenceState.displayName)
+          })
         }
       }
-      .frame(maxHeight: .infinity)
       
-      Button("Quit") {
+      Button {
         exit(0)
+      } label: {
+        Text("Quit")
+          .frame(maxWidth: .infinity)
       }
-      .frame(maxWidth: .infinity, alignment: .trailing)
+      .controlSize(.large)
     }
+    .frame(minWidth: 275)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .padding(8)
+    .padding(12)
+  }
+}
+
+struct MenuBarStatusView<State: Equatable, EnabledContent: View, DisabledContent: View>: View {
+  var state: State
+  var disabledState: State
+  var enabledContent: () -> EnabledContent
+  var disabledContent: () -> DisabledContent
+  
+  init(
+    for state: State,
+    offIf disabledState: State,
+    @ViewBuilder _ enabled: @escaping () -> EnabledContent,
+    @ViewBuilder disabled: @escaping () -> DisabledContent
+  ) {
+    self.state = state
+    self.disabledState = disabledState
+    self.enabledContent = enabled
+    self.disabledContent = disabled
+  }
+  
+  var body: some View {
+    if state != disabledState {
+      enabledContent()
+        .foregroundStyle(.white)
+        .frame(width: 14, height: 14)
+        .padding(8)
+        .background(
+          Circle()
+            .fill(.tint)
+        )
+    } else {
+      disabledContent()
+        .foregroundStyle(.white)
+        .frame(width: 14, height: 14)
+        .padding(8)
+        .background(
+          Circle()
+            .fill(.quaternary)
+        )
+    }
   }
 }

@@ -30,7 +30,9 @@ class RPC: ObservableObject, SwordRPCDelegate {
   func initialCheck() {
     let axWorking = UIElement.isProcessTrusted(withPrompt: false)
     if axWorking == false {
-      (NSApplication.shared.delegate as! AppDelegate).showSetupWindow()
+      if let delegate = NSApplication.shared.delegate as? AppDelegate {
+        delegate.showSetupWindow()
+      }
     }
     rpcConnect()
   }

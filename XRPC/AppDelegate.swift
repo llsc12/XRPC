@@ -52,16 +52,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let contentView = SetupView()
     let controller = KillOnCloseViewController()
     self.window = .init(contentViewController: controller)
+    self.window?.styleMask = [
+      .fullSizeContentView,
+      .titled,
+      .closable
+    ]
     self.window?.contentViewController?.view = NSHostingView(rootView: contentView)
-    self.window?.setContentSize(.init(width: 300, height: 400))
-    self.window?.titleVisibility = .hidden
-    self.window?.backgroundColor = .clear
-//    self.window?.standardWindowButton(.closeButton)?.isHidden = true
+    self.window?.isMovableByWindowBackground = true
+    self.window?.titlebarAppearsTransparent = true
     self.window?.standardWindowButton(.miniaturizeButton)?.isHidden = true
     self.window?.standardWindowButton(.zoomButton)?.isHidden = true
-//    let titlebar = self.window?.standardWindowButton(.closeButton)?.superview
-//    self.window?.titlebarAppearsTransparent = true
+    self.window?.titleVisibility = .hidden
+    self.window?.level = .floating
     self.window?.makeKeyAndOrderFront(self)
+    self.window?.center()
     SetupVM.shared.setupWindowClose = { self.window?.close(); self.window = nil}
   }
   

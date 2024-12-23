@@ -107,11 +107,24 @@ class AXScrape: ObservableObject {
   }
 }
 
-enum PresenceState {
+enum PresenceState: Equatable {
   case xcodeNotRunning
   case xcodeNoWindowsOpen // when xcode has no windows and is doing nothing
   case working(XcodeState) // when user is working
   case isOnWelcome
+  
+  var displayName: String {
+    switch self {
+    case .xcodeNotRunning:
+      return "Not open"
+    case .xcodeNoWindowsOpen:
+      return "No active window"
+    case .working:
+      return "Working on a project"
+    case .isOnWelcome:
+      return "In the welcome screen"
+    }
+  }
 }
 
 struct XcodeState: Equatable {

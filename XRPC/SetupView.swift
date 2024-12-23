@@ -27,35 +27,60 @@ class SetupVM: ObservableObject {
 struct SetupView: View {
   @ObservedObject var vm = SetupVM.shared
   var body: some View {
-    VStack {
-      VStack {
-        Text("XRPC Setup")
-          .font(.largeTitle)
-          .fontWeight(.semibold)
-          .fontDesign(.rounded)
-          .padding(.top)
-        Spacer()
-        
-        List {
-          HStack {
-            Text("Accessibility")
-            Spacer()
-            if !vm.accessibilityAllowed {
-              Button {
-                vm.accessibilityPrompt()
-              } label: {
-                Text("Allow")
-              }
-            }
+    VStack(spacing: 15) {
+      HStack {
+        Image(systemName: vm.accessibilityAllowed ? "accessibility.fill" : "accessibility")
+          .resizable()
+          .foregroundStyle(.primary)
+          .fontWeight(.light)
+          .frame(width: 19, height: 19)
+          .padding(5)
+          .background(
+            Circle()
+              .fill(vm.accessibilityAllowed ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary))
+          )
+        LabeledContent {
+          Spacer()
+          Button {
+            vm.accessibilityPrompt()
+          } label: {
+            Text("Allow")
           }
-        }
-        .scrollContentBackground(.hidden)
-        Button("Finish") {
-          vm.setupWindowClose()
+          .controlSize(.large)
+          .disabled(vm.accessibilityAllowed)
+        } label: {
+          Text("Accessibility")
+          Text(vm.accessibilityAllowed ? "Permission granted" : "Needs permission")
         }
       }
+      Button {
+        vm.setupWindowClose()
+      } label: {
+        Text("Finish")
+          .frame(maxWidth: .infinity)
+      }
+      .controlSize(.large)
+      .disabled(!vm.accessibilityAllowed)
     }
-    .frame(width: 300, height: 400)
-    .background(.ultraThinMaterial)
+    .toolbar {
+      ToolbarItem(placement: .principal) {
+        Text("XRPC Setup")
+          .fontWeight(.medium)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .frame(minWidth: 300)
+    .padding()
+    .background(VisualEffectView().ignoresSafeArea())
   }
+}
+
+struct VisualEffectView: NSViewRepresentable {
+  func makeNSView(context: Context) -> NSVisualEffectView {
+    let effectView = NSVisualEffectView()
+    effectView.state = .active
+    return effectView
+  }
+  
+  func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
