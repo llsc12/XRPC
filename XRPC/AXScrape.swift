@@ -5,9 +5,9 @@
 //  Created by Lakhan Lothiyi on 13/03/2024.
 //
 
-import Foundation
 import AXSwift
 import Cocoa
+import Foundation
 import SwordRPC
 
 let xcodeBundleId = "com.apple.dt.Xcode"
@@ -15,69 +15,94 @@ let xcodeBundleId = "com.apple.dt.Xcode"
 class AXScrape: ObservableObject {
   var timer: Timer?
   init() {
-    self.timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true, block: { _ in
-      self.scrape()
-    })
+    self.timer = Timer.scheduledTimer(
+      withTimeInterval: 2,
+      repeats: true,
+      block: { [weak self] _ in
+        self?.scrape()
+      }
+    )
   }
-  
+
   @Published var presenceState: PresenceState = .xcodeNoWindowsOpen
-  
+
   func scrape() {
     guard UIElement.isProcessTrusted(withPrompt: false) else { return }
-    
-    let xcodeProcess = NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == xcodeBundleId }
-    guard let xcodeApp = Application.allForBundleID(xcodeBundleId).first else { self.presenceState = .xcodeNotRunning; return }
-    
+
+    let xcodeProcess = NSWorkspace.shared.runningApplications.first {
+      $0.bundleIdentifier == xcodeBundleId
+    }
+    guard let xcodeApp = Application.allForBundleID(xcodeBundleId).first else {
+      self.presenceState = .xcodeNotRunning
+      return
+    }
+
     let windows = try? xcodeApp.windows()
-    
+
     let mainWindow: UIElement? = try? xcodeApp.attribute(.mainWindow)
-    
+
     let focusedWindow: UIElement? = try? xcodeApp.attribute(.focusedWindow)
     let focusedWindowTitle: String? = try? focusedWindow?.attribute(.title)
-    
+
     if mainWindow == nil && (windows?.isEmpty ?? false) {
       // no windows open
       self.presenceState = .xcodeNoWindowsOpen
     }
-    
+
     if focusedWindowTitle?.contains("Welcome") ?? false {
       self.presenceState = .isOnWelcome
       return
     }
-    
+
     let windowTitle: String? = try? mainWindow?.attribute(.title)
-    let workspace: String? = windowTitle == nil ? nil : windowTitle!.components(separatedBy: " — ").first
+    let workspace: String? =
+      windowTitle == nil
+      ? nil : windowTitle!.components(separatedBy: " — ").first
     let isEditing: Bool = windowTitle?.contains("— Edited") ?? false
     let docFilePath: String? = try? mainWindow?.attribute(.document)
-    let doc: URL? = docFilePath == nil ? nil : URL(fileURLWithPath: docFilePath!.replacingOccurrences(of: "file://", with: ""))
-    
+    let doc: URL? =
+      docFilePath == nil
+      ? nil
+      : URL(
+        fileURLWithPath: docFilePath!.replacingOccurrences(
+          of: "file://",
+          with: ""
+        )
+      )
+
     let currentSessionDate: Date? = {
       if case .working(let xcodeState) = presenceState {
         return xcodeState.sessionDate
       }
       return nil
     }()
-    
-    var warnings: Int, errors: Int, issues: Int
+
+    var warnings: Int
+    var errors: Int
+    var issues: Int
     warnings = 0
     errors = 0
     issues = 0
-    
+
     // we need to get the ui elements for the header bar of xcode since thats where the warns and errors are displayed
-    if
-      let focusedWindow,
-      let sourceEditor = filterElements(of: focusedWindow, filter: {
-        (try? $0.role()) ?? .unknown == .textArea &&
-        (try? $0.attribute(.description) ?? "") == "Source Editor"
-      }).first
-      
+    if let focusedWindow,
+      let sourceEditor = filterElements(
+        of: focusedWindow,
+        filter: {
+          (try? $0.role()) ?? .unknown == .textArea
+            && (try? $0.attribute(.description) ?? "") == "Source Editor"
+        }
+      ).first
     {
       // editor shows errors, runtime warnings and warnings etc in "Line Annotation" id'd elements
-      let annotations = filterElements(of: sourceEditor, filter: {
-        (try? $0.role()) ?? .unknown == .button &&
-        (try? $0.attribute(.identifier)) == "Line Annotation"
-      })
-      
+      let annotations = filterElements(
+        of: sourceEditor,
+        filter: {
+          (try? $0.role()) ?? .unknown == .button
+            && (try? $0.attribute(.identifier)) == "Line Annotation"
+        }
+      )
+
       for annotation in annotations {
         issues += 1
         let line = ((try? annotation.attribute(.description) ?? "") ?? "")
@@ -90,29 +115,33 @@ class AXScrape: ObservableObject {
         }
       }
     }
-    
+
     let xcState = XcodeState(
       workspace: workspace,
       editorFile: doc,
       isEditingFile: isEditing,
-      sessionDate: currentSessionDate ?? xcodeProcess?.launchDate ?? .now, /// preserve xcode last date or make new date, used for timings
+      sessionDate: currentSessionDate ?? xcodeProcess?.launchDate ?? .now,
+      /// preserve xcode last date or make new date, used for timings
       errors: errors,
       warnings: warnings,
       totalIssues: issues
     )
-    
-    
-    
+
     self.presenceState = .working(xcState)
+  }
+
+  deinit {
+    timer?.invalidate()
+    timer = nil
   }
 }
 
 enum PresenceState: Equatable {
   case xcodeNotRunning
-  case xcodeNoWindowsOpen // when xcode has no windows and is doing nothing
-  case working(XcodeState) // when user is working
+  case xcodeNoWindowsOpen  // when xcode has no windows and is doing nothing
+  case working(XcodeState)  // when user is working
   case isOnWelcome
-  
+
   var displayName: String {
     switch self {
     case .xcodeNotRunning:
@@ -131,23 +160,24 @@ struct XcodeState: Equatable {
   var workspace: String?
   var editorFile: URL?
   var isEditingFile: Bool
-  
+
   var sessionDate: Date?
-  
+
   var errors: Int
   var warnings: Int
   var totalIssues: Int
-  
+
   /// Is true if xcode has no file open (sitting in xcodeproj or xcworkspace)
   var isIdle: Bool {
-    editorFile?.lastPathComponent.contains("xcodeproj") ?? true || editorFile?.lastPathComponent.contains("xcworkspace") ?? true
+    editorFile?.lastPathComponent.contains("xcodeproj") ?? true
+      || editorFile?.lastPathComponent.contains("xcworkspace") ?? true
   }
-  
+
   var fileName: String? {
     if isIdle { return nil }
     return editorFile?.lastPathComponent.removingPercentEncoding
   }
-  
+
   var fileExtension: String? {
     if let fileName {
       let fx = fileName.split(separator: ".").last
@@ -159,39 +189,40 @@ struct XcodeState: Equatable {
   }
 }
 
-
-
-
-fileprivate extension String {
-  func numberOfOccurrencesOf(string: String) -> Int {
+extension String {
+  fileprivate func numberOfOccurrencesOf(string: String) -> Int {
     self.components(separatedBy: string).count - 1
   }
 }
 
-
 func traverseHierarchy(of element: UIElement, level: Int = 0) {
   let indent = String(repeating: "  ", count: level)
-  
+
   // Log the current (parent) element's details
   do {
     let role = try element.attribute(.role) as String? ?? "Unknown"
     let title = try element.attribute(.title) as String? ?? "No Title"
     let help = try element.attribute(.help) as String? ?? "No Help"
-    let desc = try element.attribute(.description) as String? ?? "No Description"
-    let vald = try element.attribute(.valueDescription) as String? ?? "No Value Description"
-    
+    let desc =
+      try element.attribute(.description) as String? ?? "No Description"
+    let vald =
+      try element.attribute(.valueDescription) as String?
+      ?? "No Value Description"
+
     //    print("\(indent)- [\(role) name] \(title)")
     //    print("\(indent)- [\(role) help] \(help)")
     //    print("\(indent)- [\(role) desc] \(desc)")
     //    print("\(indent)- [\(role) vald] \(vald)")
-    print("\(indent)- [\(role)] \(try! element.getMultipleAttributes(element.attributes()).map {($0.key.rawValue, $0.value)})")
+    print(
+      "\(indent)- [\(role)] \(try! element.getMultipleAttributes(element.attributes()).map {($0.key.rawValue, $0.value)})"
+    )
     print("")
-    
-//    Any as String
+
+    //    Any as String
   } catch {
     print("\(indent)- Error accessing attributes for element: \(error)")
   }
-  
+
   // Get the children of the current element
   if let children = try? element.children() {
     for child in children {
@@ -221,19 +252,23 @@ func filterElements(
   filter: (UIElement) -> Bool
 ) -> [UIElement] {
   var matchingElements = [UIElement]()
-  
+
   // Check if the current element matches the filter
   if filter(element) {
     matchingElements.append(element)
   }
-  
+
   // Recursively traverse the children of the element
   if let children = try? element.children() {
     for child in children {
-      let childMatches = filterElements(of: child, level: level + 1, filter: filter)
+      let childMatches = filterElements(
+        of: child,
+        level: level + 1,
+        filter: filter
+      )
       matchingElements.append(contentsOf: childMatches)
     }
   }
-  
+
   return matchingElements
 }
