@@ -12,10 +12,12 @@ import SwordRPC
 
 let xcodeBundleId = "com.apple.dt.Xcode"
 let maxElementDepth = 96
+let axMessagingTimeout: Float = 1
 
 class AXScrape: ObservableObject {
   var timer: Timer?
   init() {
+    UIElement.globalMessagingTimeout = axMessagingTimeout
     self.timer = Timer.scheduledTimer(
       withTimeInterval: 2,
       repeats: true,
