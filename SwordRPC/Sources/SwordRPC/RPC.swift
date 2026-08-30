@@ -25,6 +25,11 @@ extension SwordRPC {
     }
   }
 
+  func closeIfRemoteClosed() {
+    guard self.socket?.remoteConnectionClosed == true else { return }
+    self.socket?.close()
+  }
+
   func send(_ msg: String, _ op: OP) throws {
     let payload = msg.data(using: .utf8)!
 
@@ -63,6 +68,7 @@ extension SwordRPC {
         var response = try self.socket?.read(into: headerPtr, bufSize: 8, truncate: true)
 
         guard response! > 0 else {
+          self.closeIfRemoteClosed()
           return
         }
 
@@ -90,6 +96,7 @@ extension SwordRPC {
         self.handlePayload(op, data)
 
       }catch {
+        self.closeIfRemoteClosed()
         return
       }
     }

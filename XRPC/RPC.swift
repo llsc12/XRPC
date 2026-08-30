@@ -39,7 +39,7 @@ class RPC: ObservableObject, SwordRPCDelegate {
   
   @Published var rpcConnected: Bool = false
   func rpcConnect() {
-    guard rpcConnected == false else { return }
+    guard rpc.isConnected == false else { return }
     self.rpc = SwordRPC(appId: RPC_CLIENT_ID)
     self.rpc.delegate = self
     self.rpcConnected = self.rpc.connect()

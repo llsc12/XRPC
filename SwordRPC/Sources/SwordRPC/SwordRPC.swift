@@ -57,6 +57,10 @@ public class SwordRPC {
     self.registerUrl()
   }
 
+  public var isConnected: Bool {
+    return self.socket?.isConnected ?? false
+  }
+
   public func connect() -> Bool {
     let tmp = NSTemporaryDirectory()
 
