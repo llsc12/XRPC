@@ -11,6 +11,7 @@ import Foundation
 import SwordRPC
 
 let xcodeBundleId = "com.apple.dt.Xcode"
+let maxElementDepth = 96
 
 class AXScrape: ObservableObject {
   var timer: Timer?
@@ -252,23 +253,26 @@ func filterElements(
   filter: (UIElement) -> Bool
 ) -> [UIElement] {
   var matchingElements = [UIElement]()
+  var visited = Set<AXUIElement>()
 
-  // Check if the current element matches the filter
-  if filter(element) {
-    matchingElements.append(element)
-  }
+  func walk(_ element: UIElement, _ level: Int) {
+    guard level < maxElementDepth else { return }
+    guard visited.insert(element.element).inserted else { return }
 
-  // Recursively traverse the children of the element
-  if let children = try? element.children() {
-    for child in children {
-      let childMatches = filterElements(
-        of: child,
-        level: level + 1,
-        filter: filter
-      )
-      matchingElements.append(contentsOf: childMatches)
+    // Check if the current element matches the filter
+    if filter(element) {
+      matchingElements.append(element)
+    }
+
+    // Recursively traverse the children of the element
+    if let children = try? element.children() {
+      for child in children {
+        walk(child, level + 1)
+      }
     }
   }
+
+  walk(element, level)
 
   return matchingElements
 }
