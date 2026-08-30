@@ -91,6 +91,7 @@ class AXScrape: ObservableObject {
     if let focusedWindow,
       let sourceEditor = filterElements(
         of: focusedWindow,
+        limit: 1,
         filter: {
           (try? $0.role()) ?? .unknown == .textArea
             && (try? $0.attribute(.description) ?? "") == "Source Editor"
@@ -247,17 +248,20 @@ extension UIElement {
 /// - Parameters:
 ///   - element: The root `UIElement` to start the traversal from.
 ///   - level: The current depth in the hierarchy (used for indentation/debugging purposes).
+///   - limit: Stop traversing once this many matches have been found.
 ///   - filter: A closure that takes a `UIElement` and returns a `Bool`. If the closure returns `true`, the element is considered a match.
 /// - Returns: A list of `UIElement` objects that match the filter condition.
 func filterElements(
   of element: UIElement,
   level: Int = 0,
+  limit: Int? = nil,
   filter: (UIElement) -> Bool
 ) -> [UIElement] {
   var matchingElements = [UIElement]()
   var visited = Set<AXUIElement>()
 
   func walk(_ element: UIElement, _ level: Int) {
+    if let limit, matchingElements.count >= limit { return }
     guard level < maxElementDepth else { return }
     guard visited.insert(element.element).inserted else { return }
 
