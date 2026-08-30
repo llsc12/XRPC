@@ -13,6 +13,7 @@ import SwordRPC
 let xcodeBundleId = "com.apple.dt.Xcode"
 let maxElementDepth = 96
 let axMessagingTimeout: Float = 1
+let projectTemplateSheetId = "Xcode.ProjectTemplateChooserAssistant"
 
 class AXScrape: ObservableObject {
   var timer: Timer?
@@ -50,6 +51,14 @@ class AXScrape: ObservableObject {
     if mainWindow == nil && (windows?.isEmpty ?? false) {
       // no windows open
       self.presenceState = .xcodeNoWindowsOpen
+    }
+
+    let sheets = (windows ?? []).flatMap { (try? $0.children()) ?? [] }
+    if sheets.contains(where: {
+      (try? $0.attribute(.identifier)) == projectTemplateSheetId
+    }) {
+      self.presenceState = .isOnProjectCreation
+      return
     }
 
     if focusedWindowTitle?.contains("Welcome") ?? false {
@@ -145,6 +154,7 @@ enum PresenceState: Equatable {
   case xcodeNoWindowsOpen  // when xcode has no windows and is doing nothing
   case working(XcodeState)  // when user is working
   case isOnWelcome
+  case isOnProjectCreation
 
   var displayName: String {
     switch self {
@@ -156,6 +166,8 @@ enum PresenceState: Equatable {
       return "Working on a project"
     case .isOnWelcome:
       return "In the welcome screen"
+    case .isOnProjectCreation:
+      return "Creating a project"
     }
   }
 }

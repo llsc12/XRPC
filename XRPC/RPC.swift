@@ -117,6 +117,15 @@ class RPC: ObservableObject, SwordRPCDelegate {
       
       presence.assets.largeImage = "xcode"
       presence.assets.largeText = "Welcome to Xcode"
+    case .isOnProjectCreation:
+      presence.details = "In New Project window"
+      presence.state = "Choosing a template"
+
+      presence.timestamps.start = nil
+      presence.timestamps.end = nil
+
+      presence.assets.largeImage = "xcode"
+      presence.assets.largeText = "Creating a new project"
     }
     rpc.setPresence(presence)
   }
