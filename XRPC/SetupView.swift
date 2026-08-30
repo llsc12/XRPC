@@ -10,11 +10,10 @@ import AXSwift
 
 class SetupVM: ObservableObject {
   static let shared = SetupVM()
-  
   @Published var accessibilityAllowed: Bool = UIElement.isProcessTrusted(withPrompt: false)
   
-  init() {
-  }
+  var timer: Timer?
+  init() { }
   
   func accessibilityPrompt() {
     self.accessibilityAllowed = UIElement.isProcessTrusted(withPrompt: true)
@@ -22,6 +21,20 @@ class SetupVM: ObservableObject {
   
   var setupWindowClose: () -> Void = {}
   
+  fileprivate func setupWindowClosed() {
+    timer?.invalidate()
+  }
+  
+  fileprivate func setupWindowOpened() {
+    timer?.invalidate()
+    self.timer = Timer.scheduledTimer(
+      withTimeInterval: 1,
+      repeats: true,
+      block: { [weak self] _ in
+        self?.accessibilityAllowed = UIElement.isProcessTrusted(withPrompt: false)
+      }
+    )
+  }
 }
 
 struct SetupView: View {
@@ -72,6 +85,8 @@ struct SetupView: View {
     .frame(minWidth: 300)
     .padding()
     .background(VisualEffectView().ignoresSafeArea())
+    .onAppear { vm.setupWindowOpened() }
+    .onDisappear { vm.setupWindowClosed() }
   }
 }
 
